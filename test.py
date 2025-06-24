@@ -12,10 +12,10 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 
 texts = text_splitter.create_documents([text])
-
+print(type(texts))
 print(f'Number of chunks: {len(texts)}')
 
-print(f'First chunk: {texts[3].page_content}')
+#print(f'First chunk: {texts[3].page_content}')
 
 embeddings = OllamaEmbeddings(
     model="mxbai-embed-large:335m"
@@ -25,4 +25,7 @@ text_to_embed = texts[3].page_content
 
 embedding = embeddings.embed_query(text_to_embed)
 
-print(f'Embedding: {str(embedding)}')
+#print(f'Embedding: {str(embedding)}')
+print(type(embedding))
+embedding_dimension = len(embedding)
+print(f'Embedding dimension: {embedding_dimension}')
