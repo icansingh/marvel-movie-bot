@@ -18,7 +18,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Local development
-        "https://your-domain.com", 
+        "https://marvel-movie-bot.vercel.app",  # Replace with your actual Vercel domain
+        "https://*.ngrok.io",                  # Allow all ngrok URLs
     ],
     allow_credentials=True,
     allow_methods=["*"],
