@@ -18,7 +18,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Local development
-        "https://marvel-movie-bot.vercel.app",  # Replace with your actual Vercel domain
+        "https://marvel-movie-bot.vercel.app",  # Vercel domain
         "https://*.ngrok.io",                  # Allow all ngrok URLs
     ],
     allow_credentials=True,
@@ -26,13 +26,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def load_system_prompt():
+    with open(os.path.join(os.path.dirname(__file__), "system_prompt.txt"), "r") as f:
+        return f.read()
+SYSTEM_PROMPT_TEMPLATE = load_system_prompt()
+
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
     actor_name: Optional[str] = "jarvis"
+    conversation_history: Optional[List[ChatMessage]] = []
 
 class ChatResponse(BaseModel):
     response: str
     sources: List[dict]
+    conversation_history: List[ChatMessage]
 
 @app.get("/")
 async def root():
@@ -57,18 +68,37 @@ async def chat(request: ChatRequest):
             for doc in docs
         ]
         
-        # Create messages for LLM
+        # Build conversation history for LLM
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+            actor_name=request.actor_name,
+            context=docs_text  # or "" if not MCU-related
+        )
         messages = [
-            SystemMessage(f"Act like {request.actor_name}. You are given a question and you need to answer it based on the context provided. If you don't know the answer, just say that you don't know. Do not make up an answer. Use the following context to answer the question: {docs_text}"),
-            HumanMessage(request.message)
+            SystemMessage(system_prompt),
         ]
+        
+        # Add conversation history
+        for msg in request.conversation_history:
+            if msg.role == "user":
+                messages.append(HumanMessage(msg.content))
+            elif msg.role == "assistant":
+                messages.append(AIMessage(msg.content))
+        
+        # Add current user message
+        messages.append(HumanMessage(request.message))
         
         # Get response from LLM
         result = llm.invoke(messages)
         
+        # Build updated conversation history
+        updated_history = request.conversation_history.copy()
+        updated_history.append(ChatMessage(role="user", content=request.message))
+        updated_history.append(ChatMessage(role="assistant", content=result.content))
+        
         return ChatResponse(
             response=result.content,
-            sources=sources
+            sources=sources,
+            conversation_history=updated_history
         )
         
     except Exception as e:
