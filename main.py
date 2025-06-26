@@ -27,17 +27,10 @@ vector_store = PineconeVectorStore(
     embedding=embeddings
 )
 
-
-
-
 retriever = vector_store.as_retriever(
     search_type="similarity_score_threshold",
     search_kwargs={"k": 5, "score_threshold": 0.6}
 )
-results = retriever.invoke("What did Tony Stark say to morganin Avengers endgame?")
-
-for res in results:
-    print(f"* {res.page_content} [{res.metadata['movie_name']}]")
 
 llm = ChatOllama(
     model="llama3.1:8b",
@@ -45,18 +38,21 @@ llm = ChatOllama(
 )
 
 # prompt = input("Enter your question: ")
-prompt = "What did Tony Stark say to his daughter in his last message in Avengers endgame?"
+prompt = "In which movie did Tony stark say 'I love you 3000'?"
 
 docs = retriever.invoke(prompt)
 
+# for res in docs:
+#     print(f"* {res.page_content} [{res.metadata['movie_name']}]")
+
 docs_text = "".join(d.page_content for d in docs)
 
-
+actor_name = "jarvis"
 
 messages = [
-    SystemMessage("Act like a nerdy movie expert. You are given a question and you need to answer it based on the context provided. If you don't know the answer, just say that you don't know. Do not make up an answer. Use the following context to answer the question: " + docs_text),
+    SystemMessage("Act like {actor_name}. You are given a question and you need to answer it based on the context provided. If you don't know the answer, just say that you don't know. Do not make up an answer. Use the following context to answer the question: " + docs_text),
     #HumanMessage("Who shot down War Machine in captain america: civil war?")
-    HumanMessage("What did Tony Stark say to his daughter in his last message in Avengers endgame?")
+    HumanMessage(prompt)
 ]
 
 result = llm.invoke(messages)
